@@ -1,0 +1,95 @@
+cabal-version: 3.4
+name: otto
+version: 0.1.0.0
+synopsis: Personal automation bot for research and blog management
+description:
+  Otto is a personal automation bot that researches content across the web,
+  extracts and stores readable Markdown renditions, and assists the owner
+  with drafting and publishing blog posts. See CLAUDE.md for architecture
+  and conventions.
+
+homepage: https://github.com/ivelten/otto
+bug-reports: https://github.com/ivelten/otto/issues
+license: BSD-3-Clause
+license-file: LICENSE
+author: Ismael Carlos Velten
+maintainer: ismaelcarlosvelten@gmail.com
+copyright: 2026 Ismael Carlos Velten
+category: Application
+build-type: Simple
+tested-with: ghc ==9.10.3
+extra-doc-files:
+  CHANGELOG.md
+  CLAUDE.md
+  README.md
+
+common shared
+  default-language: GHC2024
+  default-extensions:
+    DerivingStrategies
+    DerivingVia
+    OverloadedRecordDot
+    OverloadedStrings
+    StrictData
+
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Widentities
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wmissing-export-lists
+    -Wmissing-home-modules
+    -Wpartial-fields
+    -Wredundant-constraints
+
+library
+  import: shared
+  hs-source-dirs: src
+  exposed-modules:
+    Otto.App
+    Otto.Error
+    Otto.Logging
+
+  build-depends:
+    aeson ^>=2.2,
+    base ^>=4.20,
+    bytestring ^>=0.12,
+    co-log ^>=0.6,
+    http-client ^>=0.7,
+    http-client-tls ^>=0.3,
+    mtl ^>=2.3,
+    text ^>=2.1,
+
+executable otto
+  import: shared
+  hs-source-dirs: app
+  main-is: Main.hs
+  build-depends:
+    base,
+    co-log,
+    otto,
+    text,
+
+  ghc-options:
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
+
+test-suite otto-test
+  import: shared
+  type: exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is: Main.hs
+  build-depends:
+    base,
+    otto,
+    tasty ^>=1.5,
+    tasty-golden ^>=2.3,
+    tasty-hedgehog ^>=1.4,
+    tasty-hunit ^>=0.10,
+
+  ghc-options:
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N

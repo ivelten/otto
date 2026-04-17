@@ -1,0 +1,90 @@
+# CLAUDE.md
+
+Project guidance for Claude Code when working in this repository.
+
+## Project: Otto
+
+Otto is a personal automation bot written in Haskell. The name is short, direct, contains "auto" (automation), and evokes orderliness — fitting for a bot that executes tasks with near-obsessive precision. The mental model is an "autistic", hyper-focused assistant.
+
+Otto's long-term role is to assist the owner with personal automations. The first task is managing a personal blog and website.
+
+The collaboration model is **cyborg**: Otto researches content and drafts posts; the owner reviews, revises, and publishes.
+
+## Deployment
+
+- **Host:** Hetzner Cloud (single long-running VM).
+- **Database:** PostgreSQL (primary store for research data, drafts, configuration).
+
+## Initial scope: content research
+
+The first feature is a daily content-research pipeline:
+
+- Run real web searches against the owner's topics of interest, every day.
+- Prefer recent content — avoid stale pages or broken links.
+- Crawl each page, extract its text, and store a readable Markdown rendition. Never rely on the source link surviving; the catalog is the source of truth.
+- Handle multiple source types: HTML, `.docx`, YouTube videos, GitHub repositories, and more. Each source type has its own module responsible for turning its input into canonical Markdown. Binary or non-textual sources are transcribed to text using an AI provider.
+
+The resulting research catalog is the input for later features (draft generation, post review, publishing pipeline).
+
+## Architecture principles
+
+- **Provider-agnostic AI layer.** Otto must be able to use multiple AI providers (Gemini, Claude, OpenAI, Deepseek, …). Build an abstraction that normalizes responses into a common internal format. The system picks the best model/provider per task.
+- **Per-source-type modules.** Research extraction is factored into modules by source type (HTML, docx, YouTube, GitHub, …), each responsible for turning its input into canonical Markdown.
+- **Haskell.** All application code is Haskell. The toolchain is provided by the devcontainer (GHC 9.10.3, Cabal 3.12.1.0, Stack, HLS, Ormolu, Hoogle, cabal-gild). See [README.md](README.md) for the full list.
+
+## Tech stack
+
+- **Packaging.** Single Cabal package (`otto.cabal`) at the repository root, exposing a library + executable. Only split into multiple packages when a concrete need forces it (e.g. a shared component consumed by an independent binary).
+- **License.** `BSD-3-Clause` — the Haskell community default; keeps the door open for open-sourcing pieces later without re-licensing.
+- **Application monad.** `newtype App a = App { runApp :: ReaderT Env IO a }` — the "ReaderT pattern". The outer stack is intentionally flat: no `ExceptT` on top of `IO`, because `ExceptT e IO` does not compose safely with `async` / `race` / `concurrently` (which we need for parallel crawling). `ExceptT` / `Either` stay *inside* pipelines (parsing, validation, decode) and return `Either OttoError a`; unexpected `IO` failures remain exceptions and are caught at the application edges.
+- **Logging.** [`co-log`](https://hackage.haskell.org/package/co-log). Log actions are first-class values (`LogAction m msg`) composed with `cmap` / `cfilter` / `cmapM`. mtl-friendly via `WithLog env msg m`. Swap loggers in tests by passing a different value — no mocking.
+  - **Destinations (production):** the application bootstrap composes two sinks into a single `LogAction`:
+    1. **stdout**, captured by `systemd-journald` on the Hetzner host (query with `journalctl -u otto`). Receives every severity.
+    2. **Discord webhook**, filtered with `cfilter` to `Warning` and above. Loud alerts where the owner already is, without flooding the channel with routine output.
+  - The library choice is independent of destinations — adding Grafana Cloud, Loki, or any other sink later is a matter of composing an additional `LogAction`, without touching application code.
+- **Testing.** [`tasty`](https://hackage.haskell.org/package/tasty) as the umbrella runner, with:
+  - [`tasty-hunit`](https://hackage.haskell.org/package/tasty-hunit) for unit tests.
+  - [`tasty-hedgehog`](https://hackage.haskell.org/package/tasty-hedgehog) for property-based tests (integrated shrinking).
+  - [`tasty-golden`](https://hackage.haskell.org/package/tasty-golden) for golden tests: pin canonical outputs (rendered Markdown per source type, formatted error messages, etc.) against reference files on disk. When output changes intentionally, regenerate the golden files; otherwise, failing tests are the regression signal.
+- **GHC language.** `default-language: GHC2024` (turns on `LambdaCase`, `NamedFieldPuns`, `TypeApplications`, `ImportQualifiedPost`, `NumericUnderscores`, `ScopedTypeVariables`, the `Derive*` family, `Flexible*`, and more — no need to repeat these per file).
+- **Default extensions** (on top of `GHC2024`, in every package's `.cabal`):
+  - `OverloadedStrings` — `Text` / `ByteString` literals without manual `pack`.
+  - `DerivingStrategies` — forces explicit `deriving stock` / `deriving newtype` / `deriving via` for hygiene.
+  - `DerivingVia` — derivation via newtype wrappers.
+  - `StrictData` — strict fields by default; opt into laziness explicitly with `~`.
+  - `OverloadedRecordDot` — `user.name` accessor syntax.
+
+## Repository conventions
+
+### Language
+
+All repository content is in **English**: code, identifiers, comments, commit messages, documentation, README. Even when the owner discusses the work in any other language, the artifacts stay in English.
+
+### Formatting
+
+- Indentation: 2 spaces for every file, unless the ecosystem standard is different (see [.editorconfig](.editorconfig)).
+- Haskell code is formatted with Ormolu on save.
+- `.cabal` files are formatted with cabal-gild.
+
+### Haskell code style
+
+- **Function size and complexity.** Keep cyclomatic complexity low: decompose branchy code into named helpers, prefer pipelines and pattern matching over nested `if` / `case`. If a function needs a comment to explain its control flow, split it.
+- **Haddock.** Every module starts with a module-level Haddock header (`{-|` block or `-- |` above `module`) explaining the module's purpose and the shape of its public API — this is what a reader sees first on Hackage/Hoogle. Every top-level identifier exported from a module also carries a Haddock block describing its contract for callers — *what* it does, preconditions, and non-obvious invariants. On non-trivial functions or data types, include executable `>>>` examples; examples age better than prose.
+- **Typed errors.** Model errors through the type system, not strings. Each module defines its own error sum type (e.g. `CrawlerError`, `ProviderError`, `DbError`) capturing the concrete failure modes, with fields that preserve the context needed to debug or recover. At the application boundary, a single union type (e.g. `OttoError`) wraps the per-module errors so callers can pattern-match without losing specificity. Every error type implements `Show` such that its rendering is a formatted, human-readable message ready for logging or printing — no extra formatting layer needed at the call site.
+- **Railway-oriented style.** Model failure as data. Use `ExceptT` / `Either` for sequential pipelines where the first error short-circuits, and an applicative `Validation` (e.g. the [`validation`](https://hackage.haskell.org/package/validation) package) for accumulating errors (form/input validation). Reserve `error` / `undefined` / partial functions for invariants a caller cannot violate — never for expected failure modes.
+
+### Git
+
+- **Author:** commits are authored by the repository owner (the local git `user.name` / `user.email`). Never commit as the Claude user. Claude may appear only as a co-author via the standard `Co-Authored-By:` trailer, including the model name — e.g. `Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>`.
+- **Subject line:** start with a [gitmoji](https://gitmoji.dev/), then a single space, then a sentence whose first letter is uppercase. Keep the first letter uppercase unless the first token is a proper noun, package name, or other lowercase-by-convention identifier.
+  - Examples: `✨ Add content-research crawler`, `🐛 Fix feed parser off-by-one`, `📝 Update CLAUDE.md with AI provider notes`, `⬆️ Bump aeson to 2.2`.
+
+### Gitignored / local files
+
+- `.envrc` and `.direnv/` — per-project environment via direnv.
+- `.claude/settings.local.json` — Claude Code local (per-machine) settings.
+- Any `.env*` files carrying secrets.
+
+## Memory for Claude
+
+Use **this file** (`CLAUDE.md`) as the persistent memory and guidance surface. Other Claude configuration files under `.claude/` inside this repo are also fine. Do **not** write to the external auto-memory directory — everything relevant should live in the repo so it is versioned and visible.

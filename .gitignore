@@ -1,6 +1,6 @@
-# Build artifacts
+# Haskell build artifacts
 dist/
-dist-*
+dist-*/
 cabal-dev/
 *.o
 *.hi
@@ -9,7 +9,7 @@ cabal-dev/
 *.chs.h
 *.dyn_o
 *.dyn_hi
-.hpc
+.hpc/
 .hsenv
 .cabal-sandbox/
 cabal.sandbox.config
@@ -18,12 +18,26 @@ cabal.project.local~
 cabal.project.rescan
 .ghc.environment.*
 
-# Haskell Language Server files
+# Stack / HLS / Cabal caches
 .stack-work/
 .hie/
 .cabal/
 
-# VS Code/Antigravity
+# direnv
+.envrc
+.direnv/
+
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Claude Code local settings
+.claude/settings.local.json
+.claude/.credentials.json
+
+# VS Code
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
@@ -35,3 +49,5 @@ cabal.project.rescan
 Thumbs.db
 *.tmp
 *.bak
+*.swp
+*~
