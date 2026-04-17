@@ -2,20 +2,24 @@
 -- Module      : Main
 -- Description : Top-level @tasty@ test runner for Otto.
 --
--- Tests are grouped by module under 'tests'. As modules are added, their
--- own test trees are imported here and combined with 'testGroup'.
+-- Each module's tests live under @test/Otto/**/*Spec.hs@ and export a
+-- @tests :: TestTree@ (or @IO TestTree@ when runtime decisions are needed,
+-- e.g. the env-gated integration spec). This runner stitches them together
+-- under the top-level @otto@ group.
 module Main (main) where
 
-import Test.Tasty (TestTree, defaultMain, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
+import Otto.AI.AnthropicIntegrationSpec qualified as AnthropicIntegrationSpec
+import Otto.AI.AnthropicSpec qualified as AnthropicSpec
+import Otto.AI.MockSpec qualified as MockSpec
+import Test.Tasty (defaultMain, testGroup)
 
 main :: IO ()
-main = defaultMain tests
-
-tests :: TestTree
-tests =
-  testGroup
-    "otto"
-    [ testCase "scaffold compiles and links" $
-        (1 + 1 :: Int) @?= 2
-    ]
+main = do
+  integrationTree <- AnthropicIntegrationSpec.tests
+  defaultMain $
+    testGroup
+      "otto"
+      [ MockSpec.tests,
+        AnthropicSpec.tests,
+        integrationTree
+      ]

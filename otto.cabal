@@ -47,6 +47,14 @@ library
   import: shared
   hs-source-dirs: src
   exposed-modules:
+    Otto.AI
+    Otto.AI.Anthropic
+    Otto.AI.Anthropic.Internal
+    Otto.AI.Config
+    Otto.AI.Error
+    Otto.AI.Mock
+    Otto.AI.Provider
+    Otto.AI.Types
     Otto.App
     Otto.Error
     Otto.Logging
@@ -55,9 +63,11 @@ library
     aeson ^>=2.2,
     base ^>=4.20,
     bytestring ^>=0.12,
+    case-insensitive ^>=1.2,
     co-log ^>=0.6,
     http-client ^>=0.7,
     http-client-tls ^>=0.3,
+    http-types ^>=0.12,
     mtl ^>=2.3,
     text ^>=2.1,
 
@@ -68,6 +78,8 @@ executable otto
   build-depends:
     base,
     co-log,
+    http-client,
+    http-client-tls,
     otto,
     text,
 
@@ -81,13 +93,23 @@ test-suite otto-test
   type: exitcode-stdio-1.0
   hs-source-dirs: test
   main-is: Main.hs
+  other-modules:
+    Otto.AI.AnthropicIntegrationSpec
+    Otto.AI.AnthropicSpec
+    Otto.AI.MockSpec
+
   build-depends:
+    aeson,
     base,
+    bytestring,
+    http-client,
+    http-client-tls,
     otto,
     tasty ^>=1.5,
     tasty-golden ^>=2.3,
     tasty-hedgehog ^>=1.4,
     tasty-hunit ^>=0.10,
+    text,
 
   ghc-options:
     -threaded
