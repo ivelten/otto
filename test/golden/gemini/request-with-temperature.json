@@ -1,0 +1,1 @@
+{"contents":[{"role":"user","parts":[{"text":"What is 2+2?"}]},{"role":"model","parts":[{"text":"4"}]},{"role":"user","parts":[{"text":"Is it always 4?"}]}],"generationConfig":{"maxOutputTokens":512,"temperature":0.7}}

@@ -50,8 +50,11 @@ library
     Otto.AI
     Otto.AI.Anthropic
     Otto.AI.Anthropic.Internal
+    Otto.AI.Cli
     Otto.AI.Config
     Otto.AI.Error
+    Otto.AI.Gemini
+    Otto.AI.Gemini.Internal
     Otto.AI.Mock
     Otto.AI.Provider
     Otto.AI.Types
@@ -96,6 +99,9 @@ test-suite otto-test
   other-modules:
     Otto.AI.AnthropicIntegrationSpec
     Otto.AI.AnthropicSpec
+    Otto.AI.CliSpec
+    Otto.AI.GeminiIntegrationSpec
+    Otto.AI.GeminiSpec
     Otto.AI.MockSpec
 
   build-depends:
