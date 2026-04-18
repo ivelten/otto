@@ -31,7 +31,9 @@ The resulting research catalog is the input for later features (draft generation
 ## Architecture principles
 
 - **Provider-agnostic AI layer.** Otto must be able to use multiple AI providers (Gemini, Claude, OpenAI, Deepseek, …). Build an abstraction that normalizes responses into a common internal format. The system picks the best model/provider per task.
-- **Per-source-type modules.** Research extraction is factored into modules by source type (HTML, docx, YouTube, GitHub, …), each responsible for turning its input into canonical Markdown.
+- **Vendor-agnostic crawler layer.** Same idea applied to URL fetching: a single abstraction normalizes different fetch strategies (Jina Reader today, local Playwright tomorrow, …) into a common `CrawlResult`. The first implementation is Jina Reader; others slot in behind the same handle without touching callers.
+- **Handle pattern for swappable capabilities.** Both the AI (`Provider`) and the crawler (`Crawler`) are record-of-functions values held in `Env` through small `Has*` classes (`HasAI`, `HasCrawler`, mirroring `HasLog`). New capabilities (database pool, job queue, storage, …) follow the same shape so they stay trivially swappable in tests and composable at bootstrap.
+- **Per-source-type modules.** Research extraction is factored into modules by source type (HTML, docx, YouTube, GitHub, …), each responsible for turning its input into canonical Markdown. This is a different axis from the crawler layer: a source-type module decides *how to interpret* bytes; the crawler decides *how to obtain* them.
 - **Haskell.** All application code is Haskell. The toolchain is provided by the devcontainer (GHC 9.10.3, Cabal 3.12.1.0, Stack, HLS, Ormolu, Hoogle, cabal-gild). See [README.md](README.md) for the full list.
 
 ## Tech stack

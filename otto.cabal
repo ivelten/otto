@@ -3,10 +3,10 @@ name: otto
 version: 0.1.0.0
 synopsis: Personal automation bot for research and blog management
 description:
-  Otto is a personal automation bot that researches content across the web,
-  extracts and stores readable Markdown renditions, and assists the owner
-  with drafting and publishing blog posts. See CLAUDE.md for architecture
-  and conventions.
+  Otto is a personal automation bot. It fetches web pages as canonical
+  Markdown and queries multiple AI providers (Anthropic, Gemini) through
+  a vendor-neutral interface. See CLAUDE.md for architecture and
+  conventions.
 
 homepage: https://github.com/ivelten/otto
 bug-reports: https://github.com/ivelten/otto/issues
