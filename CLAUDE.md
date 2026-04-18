@@ -12,8 +12,10 @@ The collaboration model is **cyborg**: Otto researches content and drafts posts;
 
 ## Deployment
 
-- **Host:** Hetzner Cloud (single long-running VM).
-- **Database:** PostgreSQL (primary store for research data, drafts, configuration).
+- **Host:** a single long-running Linux VM (`aarch64-linux`). Hosting-provider
+  details are intentionally kept out of the repository.
+- **Database:** PostgreSQL (primary store for research data, drafts,
+  configuration).
 
 ## Initial scope: content research
 
@@ -39,7 +41,7 @@ The resulting research catalog is the input for later features (draft generation
 - **Application monad.** `newtype App a = App { runApp :: ReaderT Env IO a }` — the "ReaderT pattern". The outer stack is intentionally flat: no `ExceptT` on top of `IO`, because `ExceptT e IO` does not compose safely with `async` / `race` / `concurrently` (which we need for parallel crawling). `ExceptT` / `Either` stay *inside* pipelines (parsing, validation, decode) and return `Either OttoError a`; unexpected `IO` failures remain exceptions and are caught at the application edges.
 - **Logging.** [`co-log`](https://hackage.haskell.org/package/co-log). Log actions are first-class values (`LogAction m msg`) composed with `cmap` / `cfilter` / `cmapM`. mtl-friendly via `WithLog env msg m`. Swap loggers in tests by passing a different value — no mocking.
   - **Destinations (production):** the application bootstrap composes two sinks into a single `LogAction`:
-    1. **stdout**, captured by `systemd-journald` on the Hetzner host (query with `journalctl -u otto`). Receives every severity.
+    1. **stdout**, captured by `systemd-journald` on the production host (query with `journalctl -u otto`). Receives every severity.
     2. **Discord webhook**, filtered with `cfilter` to `Warning` and above. Loud alerts where the owner already is, without flooding the channel with routine output.
   - The library choice is independent of destinations — adding Grafana Cloud, Loki, or any other sink later is a matter of composing an additional `LogAction`, without touching application code.
 - **Testing.** [`tasty`](https://hackage.haskell.org/package/tasty) as the umbrella runner, with:

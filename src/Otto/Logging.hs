@@ -4,7 +4,7 @@
 --
 -- Otto writes logs to two destinations in production:
 --
--- 1. __stdout__, captured by @systemd-journald@ on the Hetzner host.
+-- 1. __stdout__, captured by @systemd-journald@ on the production host.
 --    Receives every severity. Query with @journalctl -u otto@.
 -- 2. __Discord webhook__, filtered to @Warning@ and above — loud alerts
 --    where the owner already is, without flooding the channel with
