@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+# Cancel older runs of the same ref when a new one starts — saves
+# ARM minutes on rapid pushes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Build & test (aarch64-linux)
+    # Matches the deployment target architecture (aarch64-linux).
+    # Integration tests that need OTTO_ANTHROPIC_API_KEY /
+    # OTTO_GEMINI_API_KEY remain empty groups here — enable them later
+    # by setting those as repo secrets and adding `env:` entries below.
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Haskell (GHC 9.10.3 / Cabal 3.12.1.0)
+        id: setup
+        uses: haskell-actions/setup@v2
+        with:
+          ghc-version: '9.10.3'
+          cabal-version: '3.12.1.0'
+
+      - name: Update Hackage index
+        run: cabal update
+
+      - name: Cache cabal store and build artefacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.setup.outputs.cabal-store }}
+            dist-newstyle
+          key: cabal-${{ runner.os }}-aarch64-ghc9.10.3-${{ hashFiles('**/*.cabal', 'cabal.project') }}
+          restore-keys: |
+            cabal-${{ runner.os }}-aarch64-ghc9.10.3-
+
+      - name: Build (library, executable, tests)
+        run: cabal build all
+
+      - name: Test
+        run: cabal test all --test-show-details=streaming
