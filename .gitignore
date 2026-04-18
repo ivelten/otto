@@ -37,6 +37,11 @@ cabal.project.rescan
 .claude/settings.local.json
 .claude/.credentials.json
 
+# Local working notes (scratch, todo, pick-up-next reminders)
+NEXT.md
+TODO.md
+NOTES.md
+
 # VS Code
 .vscode/*
 !.vscode/extensions.json
