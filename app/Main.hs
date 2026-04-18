@@ -4,15 +4,18 @@
 --
 -- Dispatches on the first command-line argument:
 --
--- * no arguments → startup probe (logs a couple of 'Colog.logInfo' lines
---   and exits).
--- * @ask [--provider NAME | -p NAME] PROMPT@ → sends PROMPT through the
---   selected AI provider and prints the response to stdout.
+-- * no arguments → startup probe (logs a couple of 'Colog.logInfo'
+--   lines and exits).
+-- * @ask [--provider NAME | -p NAME] PROMPT@ → sends PROMPT through
+--   the selected AI provider and prints the response to stdout.
+-- * @crawl URL@ → fetches URL through the configured crawler and
+--   prints the extracted Markdown to stdout.
 -- * @--help@ / @-h@ → prints usage.
 --
--- Provider-selection precedence for @ask@: the @--provider@/@-p@ flag
--- wins; otherwise the @OTTO_PROVIDER@ env variable applies; otherwise
--- @anthropic@. The corresponding @*_API_KEY@ must also be set.
+-- Provider-selection precedence for @ask@: the @--provider@/@-p@
+-- flag wins; otherwise the @OTTO_PROVIDER@ env variable applies;
+-- otherwise @anthropic@. The corresponding @*_API_KEY@ must also be
+-- set.
 module Main (main) where
 
 import Colog (logInfo)
@@ -37,19 +40,34 @@ import Otto.AI.Cli
     parseAskArgs,
   )
 import Otto.App (App, Env (..), liftLogAction, runApp)
+import Otto.Crawler
+  ( CrawlRequest (..),
+    CrawlResult (..),
+    URL (..),
+    buildCrawler,
+    fetch,
+    loadCrawlerConfigFromEnv,
+  )
 import Otto.Logging (LoggingConfig (..), bootstrapLogAction)
 import System.Environment (getArgs, lookupEnv)
 import System.Exit (exitFailure)
-import System.IO (hPutStrLn, stderr)
+import System.IO (hPutStrLn, hSetEncoding, stderr, stdout, utf8)
 
 main :: IO ()
 main = do
+  -- Crawled content regularly contains non-ASCII (em dashes, accented
+  -- characters, non-Latin scripts). Force UTF-8 on the standard
+  -- streams so output doesn't die on the default C locale in
+  -- minimal container images.
+  hSetEncoding stdout utf8
+  hSetEncoding stderr utf8
   args <- getArgs
   case args of
     [] -> runDefault
     ["--help"] -> printUsage
     ["-h"] -> printUsage
     ("ask" : rest) -> runAskCmd rest
+    ("crawl" : rest) -> runCrawlCmd rest
     _ -> do
       hPutStrLn stderr ("unknown arguments: " <> unwords args)
       printUsage
@@ -61,7 +79,8 @@ printUsage =
     putStrLn
     [ "usage:",
       "  otto                                   run the default startup routine",
-      "  otto ask [--provider NAME] PROMPT...   send PROMPT through the selected provider",
+      "  otto ask [--provider NAME] PROMPT...   send PROMPT through the selected AI provider",
+      "  otto crawl URL                         fetch URL as canonical Markdown",
       "  otto --help | -h                       show this message",
       "",
       "provider-selection precedence for `ask`:",
@@ -72,6 +91,8 @@ printUsage =
       "  OTTO_PROVIDER              anthropic (default) | gemini",
       "  OTTO_ANTHROPIC_API_KEY     required when the Anthropic provider is used",
       "  OTTO_GEMINI_API_KEY        required when the Gemini provider is used",
+      "  OTTO_JINA_API_KEY          optional; enables Jina's authenticated tier",
+      "  OTTO_JINA_ENGINE           optional; direct (default) | browser",
       "  OTTO_DISCORD_WEBHOOK_URL   optional; Warning+ logs posted there"
     ]
 
@@ -119,6 +140,29 @@ dispatchAsk env model prompt = do
       exitFailure
     Right resp -> Text.putStrLn (respText resp)
 
+runCrawlCmd :: [String] -> IO ()
+runCrawlCmd [] = do
+  hPutStrLn stderr "usage: otto crawl URL"
+  exitFailure
+runCrawlCmd [url] = dispatchCrawl (URL (Text.pack url))
+runCrawlCmd extra = do
+  hPutStrLn
+    stderr
+    ("otto crawl: expected exactly one URL, got " <> show (length extra))
+  exitFailure
+
+dispatchCrawl :: URL -> IO ()
+dispatchCrawl url = do
+  cfg <- loadAIConfigFromEnv
+  pref <- resolvePreferred Nothing
+  env <- buildEnv cfg pref
+  result <- runApp env (fetch CrawlRequest {crawlUrl = url})
+  case result of
+    Left err -> do
+      hPutStrLn stderr (show err)
+      exitFailure
+    Right res -> Text.putStrLn (crawledContent res)
+
 -- | Resolve the preferred provider: the command-line override wins,
 -- otherwise the @OTTO_PROVIDER@ env variable, otherwise
 -- 'PreferAnthropic'. An unrecognized env variable value produces a
@@ -138,13 +182,15 @@ resolvePreferred = \case
         pure PreferAnthropic
 
 buildEnv :: AIConfig -> PreferredProvider -> IO Env
-buildEnv cfg pref = do
+buildEnv aiCfg pref = do
   manager <- newTlsManager
+  crawlerCfg <- loadCrawlerConfigFromEnv
   webhookUrl <- fmap Text.pack <$> lookupEnv "OTTO_DISCORD_WEBHOOK_URL"
   ioLogAction <-
     bootstrapLogAction manager LoggingConfig {logDiscordWebhookUrl = webhookUrl}
   pure
     Env
       { envLogAction = liftLogAction ioLogAction,
-        envAI = buildProvider manager cfg pref
+        envAI = buildProvider manager aiCfg pref,
+        envCrawler = buildCrawler manager crawlerCfg
       }

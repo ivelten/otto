@@ -59,6 +59,14 @@ library
     Otto.AI.Provider
     Otto.AI.Types
     Otto.App
+    Otto.Crawler
+    Otto.Crawler.Config
+    Otto.Crawler.Error
+    Otto.Crawler.Handle
+    Otto.Crawler.Jina
+    Otto.Crawler.Jina.Internal
+    Otto.Crawler.Mock
+    Otto.Crawler.Types
     Otto.Error
     Otto.Logging
 
@@ -73,6 +81,7 @@ library
     http-types ^>=0.12,
     mtl ^>=2.3,
     text ^>=2.1,
+    time ^>=1.12,
 
 executable otto
   import: shared
@@ -103,6 +112,9 @@ test-suite otto-test
     Otto.AI.GeminiIntegrationSpec
     Otto.AI.GeminiSpec
     Otto.AI.MockSpec
+    Otto.Crawler.JinaIntegrationSpec
+    Otto.Crawler.JinaSpec
+    Otto.Crawler.MockSpec
 
   build-depends:
     aeson,
@@ -116,6 +128,7 @@ test-suite otto-test
     tasty-hedgehog ^>=1.4,
     tasty-hunit ^>=0.10,
     text,
+    time,
 
   ghc-options:
     -threaded
