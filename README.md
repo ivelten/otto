@@ -2,9 +2,10 @@
 
 Personal automation bot written in Haskell. Researches content across the
 web, extracts it as canonical Markdown, and calls LLMs to summarize and
-draft posts. See [CLAUDE.md](CLAUDE.md) for architecture, tech stack, and
-repository conventions; see [CHANGELOG.md](CHANGELOG.md) for what has
-landed.
+draft posts. See [docs/overview.md](docs/overview.md) for the end-to-end
+system overview and workflow diagrams; see [CLAUDE.md](CLAUDE.md) for
+architecture principles and repository conventions; see
+[CHANGELOG.md](CHANGELOG.md) for what has landed.
 
 ## Requirements
 
@@ -44,8 +45,17 @@ cabal run otto -- --help
   `<OTTO_CATALOG_DIR>/<slug>.md` with YAML frontmatter. Crawl errors
   are appended to `<OTTO_CATALOG_DIR>/.failures.jsonl` instead of
   discarded.
+- `otto digest` — runs the research-ingestion pipeline. Loads
+  `config/sources.yaml`, fetches every seed RSS / Atom feed, filters
+  items to the last 7 days, crawls each surviving entry, and persists
+  successes (or failure records) to the catalog. Designed to be
+  invoked on a recurring systemd timer (weekly today).
 - `otto --help` / `otto -h` — prints usage and the list of recognized
   environment variables.
+
+A future `otto weekly` will read the catalog and synthesize the
+weekly post draft; it has no implementation yet — synthesis lands
+with the draft-generation work item.
 
 Examples:
 
@@ -61,6 +71,9 @@ cabal run -v0 otto -- crawl https://example.com > example.md
 
 # Persist a page to the catalog (default: ./catalog/<slug>.md)
 cabal run -v0 otto -- research https://example.com
+
+# Run the digest pipeline against config/sources.yaml
+cabal run -v0 otto -- digest
 ```
 
 ## Configuration
@@ -101,6 +114,25 @@ automatically by `direnv`).
   `<dir>/<slug>.md` per saved page and appends crawl failures to
   `<dir>/.failures.jsonl`.
 
+### Sources
+
+- `OTTO_SOURCES_PATH` — optional; path to the YAML registry of topics
+  and seed feeds consumed by `otto digest`. Defaults to
+  `./config/sources.yaml`. Each entry pairs a free-form topic label
+  with a list of RSS / Atom URLs; per-feed items are filtered to the
+  last 7 days before being crawled and persisted.
+
+The repository ships
+[`config/sources.yaml.example`](config/sources.yaml.example) as a
+template; the real `config/sources.yaml` is gitignored so the owner's
+actual subscriptions stay private. Before the first `otto digest`,
+copy the example and fill in your own feeds:
+
+```bash
+cp config/sources.yaml.example config/sources.yaml
+$EDITOR config/sources.yaml
+```
+
 ### Logging
 
 - `OTTO_DISCORD_WEBHOOK_URL` — optional. When set, `Warning+` log
@@ -121,14 +153,19 @@ automatically by `direnv`).
 │   ├── AI/                   # Provider abstraction + impls (Anthropic, Gemini, Mock)
 │   ├── Catalog/              # Catalog abstraction + filesystem impl + pure renderer
 │   ├── Crawler/              # Crawler abstraction + Jina Reader impl + Mock
-│   ├── App.hs                # Application monad, Env, HasLog/HasAI/HasCrawler/HasCatalog instances
-│   ├── Error.hs              # OttoError union (AIError | CrawlError | CatalogStoreError)
-│   └── Logging.hs            # co-log bootstrap (stdout + optional Discord)
+│   ├── Feed/                 # Feed abstraction + HTTP + RSS/Atom parser
+│   ├── Sources/              # Sources YAML registry: types, config, error, loader
+│   ├── App.hs                # Application monad, Env, HasLog/HasAI/HasCrawler/HasCatalog/HasFeeds
+│   ├── Error.hs              # OttoError union
+│   ├── Logging.hs            # co-log bootstrap (stdout + optional Discord)
+│   └── Pipeline.hs           # Research-ingestion orchestrator (`otto digest`)
 ├── app/Main.hs               # Executable entry point + CLI dispatch
+├── config/
+│   └── sources.yaml.example  # Template; copy to sources.yaml (gitignored) for `otto digest`
 ├── test/
 │   ├── Main.hs               # tasty runner
 │   ├── Otto/                 # Spec modules mirroring src/Otto
-│   └── golden/               # Golden fixtures (Anthropic / Gemini / catalog wire formats)
+│   └── golden/               # Golden fixtures (Anthropic / Gemini / catalog / sources / feed)
 ├── .github/workflows/ci.yml  # ARM64 build + test on push / PR
 ├── otto.cabal                # Single-package manifest
 ├── cabal.project

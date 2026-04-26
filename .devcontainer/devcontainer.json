@@ -14,6 +14,7 @@
         "editorconfig.editorconfig",
         "yzhang.markdown-all-in-one",
         "davidanson.vscode-markdownlint",
+        "bierner.markdown-mermaid",
         "Anthropic.claude-code",
         "phoityne.phoityne-vscode"
       ],

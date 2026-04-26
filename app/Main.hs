@@ -12,6 +12,9 @@
 --   prints the extracted Markdown to stdout.
 -- * @research URL@ → fetches URL and persists it to the catalog;
 --   crawl failures are appended to the catalog's failure log.
+-- * @digest@ → runs the research-ingestion pipeline against the
+--   sources registry: load feeds, filter to the last 7 days, crawl,
+--   and persist.
 -- * @--help@ / @-h@ → prints usage.
 --
 -- Provider-selection precedence for @ask@: the @--provider@/@-p@
@@ -58,7 +61,19 @@ import Otto.Crawler
     fetch,
     loadCrawlerConfigFromEnv,
   )
+import Otto.Feed (buildFeeds)
 import Otto.Logging (LoggingConfig (..), bootstrapLogAction)
+import Otto.Pipeline
+  ( PipelineReport (..),
+    SourceReport (..),
+    defaultPipelineConfig,
+    runDigest,
+  )
+import Otto.Sources
+  ( Topic (..),
+    loadSources,
+    loadSourcesConfigFromEnv,
+  )
 import System.Environment (getArgs, lookupEnv)
 import System.Exit (exitFailure)
 import System.IO (hPutStrLn, hSetEncoding, stderr, stdout, utf8)
@@ -79,6 +94,7 @@ main = do
     ("ask" : rest) -> runAskCmd rest
     ("crawl" : rest) -> runCrawlCmd rest
     ("research" : rest) -> runResearchCmd rest
+    ("digest" : rest) -> runDigestCmd rest
     _ -> do
       hPutStrLn stderr ("unknown arguments: " <> unwords args)
       printUsage
@@ -93,6 +109,7 @@ printUsage =
       "  otto ask [--provider NAME] PROMPT...   send PROMPT through the selected AI provider",
       "  otto crawl URL                         fetch URL as canonical Markdown (stdout only)",
       "  otto research URL                      fetch URL and save it to the catalog",
+      "  otto digest                            run the research-ingestion pipeline over config/sources.yaml",
       "  otto --help | -h                       show this message",
       "",
       "provider-selection precedence for `ask`:",
@@ -106,6 +123,7 @@ printUsage =
       "  OTTO_JINA_API_KEY          optional; enables Jina's authenticated tier",
       "  OTTO_JINA_ENGINE           optional; direct (default) | browser",
       "  OTTO_CATALOG_DIR           optional; root for the research catalog (default: ./catalog)",
+      "  OTTO_SOURCES_PATH          optional; path to the sources YAML (default: ./config/sources.yaml)",
       "  OTTO_DISCORD_WEBHOOK_URL   optional; Warning+ logs posted there"
     ]
 
@@ -215,6 +233,53 @@ dispatchResearch url = do
           exitFailure
         Right entry -> putStrLn ("saved: " <> entryPath entry)
 
+runDigestCmd :: [String] -> IO ()
+runDigestCmd extra
+  | not (null extra) = do
+      hPutStrLn stderr ("otto digest: expected no arguments, got " <> show (length extra))
+      exitFailure
+  | otherwise = do
+      cfg <- loadAIConfigFromEnv
+      pref <- resolvePreferred Nothing
+      env <- buildEnv cfg pref
+      sourcesCfg <- loadSourcesConfigFromEnv
+      sourcesResult <- loadSources sourcesCfg
+      case sourcesResult of
+        Left err -> do
+          hPutStrLn stderr (show err)
+          exitFailure
+        Right sources -> do
+          report <- runApp env (runDigest defaultPipelineConfig sources)
+          printDigestReport report
+
+printDigestReport :: PipelineReport -> IO ()
+printDigestReport rep = do
+  putStrLn "digest run summary:"
+  mapM_ printSourceReport (prSources rep)
+  putStrLn $
+    "totals: considered="
+      <> show (prItemsConsidered rep)
+      <> " saved="
+      <> show (prItemsSaved rep)
+      <> " failed="
+      <> show (prItemsFailed rep)
+
+printSourceReport :: SourceReport -> IO ()
+printSourceReport sr =
+  putStrLn $
+    "  topic="
+      <> Text.unpack (unTopic (srTopic sr))
+      <> " feeds_loaded="
+      <> show (srFeedsLoaded sr)
+      <> " feeds_failed="
+      <> show (srFeedsFailed sr)
+      <> " considered="
+      <> show (srItemsConsidered sr)
+      <> " saved="
+      <> show (srItemsSaved sr)
+      <> " failed="
+      <> show (srItemsFailed sr)
+
 -- | Resolve the preferred provider: the command-line override wins,
 -- otherwise the @OTTO_PROVIDER@ env variable, otherwise
 -- 'PreferAnthropic'. An unrecognized env variable value produces a
@@ -246,5 +311,6 @@ buildEnv aiCfg pref = do
       { envLogAction = liftLogAction ioLogAction,
         envAI = buildProvider manager aiCfg pref,
         envCrawler = buildCrawler manager crawlerCfg,
-        envCatalog = buildCatalog catalogCfg
+        envCatalog = buildCatalog catalogCfg,
+        envFeeds = buildFeeds manager
       }

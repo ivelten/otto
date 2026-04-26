@@ -1,0 +1,8 @@
+sources:
+  - topic: "topic-one"
+    seeds:
+      - https://example.com/feed.atom
+      - https://example.com/another-feed.xml
+  - topic: "topic-two"
+    seeds:
+      - https://example.com/third-feed.rss

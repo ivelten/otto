@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Example Feed</title>
+    <link>https://example.com/</link>
+    <description>An example RSS feed for tests.</description>
+    <item>
+      <title>Recent post</title>
+      <link>https://example.com/posts/recent</link>
+      <pubDate>Mon, 20 Apr 2026 10:00:00 +0000</pubDate>
+      <description>A post that should be considered recent.</description>
+    </item>
+    <item>
+      <title>Older post</title>
+      <link>https://example.com/posts/older</link>
+      <pubDate>Wed, 01 Jan 2025 10:00:00 +0000</pubDate>
+      <description>A post from before the recency window.</description>
+    </item>
+    <item>
+      <title>Linkless post</title>
+      <pubDate>Sun, 19 Apr 2026 10:00:00 +0000</pubDate>
+      <description>Should be dropped — no link.</description>
+    </item>
+  </channel>
+</rss>

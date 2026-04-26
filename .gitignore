@@ -42,6 +42,10 @@ NEXT.md
 TODO.md
 NOTES.md
 
+# Owner's private sources registry (copy from
+# config/sources.yaml.example).
+config/sources.yaml
+
 # VS Code
 .vscode/*
 !.vscode/extensions.json

@@ -19,6 +19,8 @@ where
 import Otto.AI.Error (ProviderError)
 import Otto.Catalog.Error (CatalogError)
 import Otto.Crawler.Error (CrawlerError)
+import Otto.Feed.Error (FeedError)
+import Otto.Sources.Error (SourcesError)
 
 -- | Top-level error type. Grows as modules are added.
 data OttoError
@@ -32,4 +34,10 @@ data OttoError
   | -- | A failure surfaced by a catalog backend (filesystem I/O or
     -- misconfiguration). See "Otto.Catalog.Error".
     CatalogStoreError CatalogError
+  | -- | A failure surfaced while loading the sources registry (missing
+    -- file, parse error). See "Otto.Sources.Error".
+    SourcesLoadError SourcesError
+  | -- | A failure surfaced by a feed implementation (network, HTTP,
+    -- parse, or misconfiguration). See "Otto.Feed.Error".
+    FeedLoadError FeedError
   deriving stock (Show)

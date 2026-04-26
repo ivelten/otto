@@ -1,0 +1,21 @@
+# Otto research sources — example template.
+#
+# Copy this file to `config/sources.yaml` (gitignored) and fill in the
+# topics and seed URLs you actually want Otto to follow. The path is
+# overridable via `OTTO_SOURCES_PATH`.
+#
+# Each entry pairs a free-form `topic` label with a list of seed URLs.
+# Seeds are RSS or Atom feeds today; per-feed item URLs are crawled by
+# `otto digest`, filtered to the last 7 days, and persisted to the
+# catalog. Topics are stable identifiers that flow through to the
+# catalog and (eventually) to the draft generator — pick names that
+# map cleanly to blog categories.
+sources:
+  - topic: "topic-name"
+    seeds:
+      # Replace with the feeds you actually want to follow.
+      - https://example.com/feed.atom
+      - https://example.com/another-source/index.xml
+  - topic: "another-topic"
+    seeds:
+      - https://example.com/feed.xml

@@ -19,12 +19,24 @@ The collaboration model is **cyborg**: Otto researches content and drafts posts;
 
 ## Initial scope: content research
 
-The first feature is a daily content-research pipeline:
+The first feature is a **weekly** content-research pipeline:
 
-- Run real web searches against the owner's topics of interest, every day.
-- Prefer recent content — avoid stale pages or broken links.
-- Crawl each page, extract its text, and store a readable Markdown rendition. Never rely on the source link surviving; the catalog is the source of truth.
-- Handle multiple source types: HTML, `.docx`, YouTube videos, GitHub repositories, and more. Each source type has its own module responsible for turning its input into canonical Markdown. Binary or non-textual sources are transcribed to text using an AI provider.
+- Run real web searches against the owner's topics of interest, once a week.
+  The cadence is intentionally weekly, not daily — the goal is one
+  well-edited post per week, and a tighter loop just inflates the catalog
+  with noise. The ingestion command is `otto digest` (it pulls feeds, crawls,
+  and persists). The production host invokes it from a systemd timer. A
+  future `otto weekly` will synthesize the post draft from the catalog
+  alone; the split keeps writers and readers of the catalog as separate
+  commands.
+- Prefer recent content — items older than the 7-day window are dropped at
+  the pipeline boundary; stale links never reach the crawler.
+- Crawl each page, extract its text, and store a readable Markdown rendition.
+  Never rely on the source link surviving; the catalog is the source of truth.
+- Handle multiple source types: HTML, `.docx`, YouTube videos, GitHub
+  repositories, and more. Each source type has its own module responsible
+  for turning its input into canonical Markdown. Binary or non-textual
+  sources are transcribed to text using an AI provider.
 
 The resulting research catalog is the input for later features (draft generation, post review, publishing pipeline).
 
@@ -32,7 +44,7 @@ The resulting research catalog is the input for later features (draft generation
 
 - **Provider-agnostic AI layer.** Otto must be able to use multiple AI providers (Gemini, Claude, OpenAI, Deepseek, …). Build an abstraction that normalizes responses into a common internal format. The system picks the best model/provider per task.
 - **Vendor-agnostic crawler layer.** Same idea applied to URL fetching: a single abstraction normalizes different fetch strategies (Jina Reader today, local Playwright tomorrow, …) into a common `CrawlResult`. The first implementation is Jina Reader; others slot in behind the same handle without touching callers.
-- **Handle pattern for swappable capabilities.** Both the AI (`Provider`) and the crawler (`Crawler`) are record-of-functions values held in `Env` through small `Has*` classes (`HasAI`, `HasCrawler`, mirroring `HasLog`). New capabilities (database pool, job queue, storage, …) follow the same shape so they stay trivially swappable in tests and composable at bootstrap.
+- **Handle pattern for swappable capabilities.** The AI (`Provider`), the crawler (`Crawler`), the catalog (`Catalog`), and the feed loader (`Feeds`) are all record-of-functions values held in `Env` through small `Has*` classes (`HasAI`, `HasCrawler`, `HasCatalog`, `HasFeeds`, mirroring `HasLog`). New capabilities (database pool, job queue, …) follow the same shape so they stay trivially swappable in tests and composable at bootstrap.
 - **Per-source-type modules.** Research extraction is factored into modules by source type (HTML, docx, YouTube, GitHub, …), each responsible for turning its input into canonical Markdown. This is a different axis from the crawler layer: a source-type module decides *how to interpret* bytes; the crawler decides *how to obtain* them.
 - **Haskell.** All application code is Haskell. The toolchain is provided by the devcontainer (GHC 9.10.3, Cabal 3.12.1.0, Stack, HLS, Ormolu, Hoogle, cabal-gild). See [README.md](README.md) for the full list.
 
@@ -70,6 +82,7 @@ All repository content is in **English**: code, identifiers, comments, commit me
 - Indentation: 2 spaces for every file, unless the ecosystem standard is different (see [.editorconfig](.editorconfig)).
 - Haskell code is formatted with Ormolu on save.
 - `.cabal` files are formatted with cabal-gild.
+- Markdown is linted with [`markdownlint-cli2`](https://github.com/DavidAnson/markdownlint-cli2). Configuration lives in [`.markdownlint-cli2.jsonc`](.markdownlint-cli2.jsonc); the same file drives both the `davidanson.vscode-markdownlint` extension (in-editor, already in the devcontainer) and the CLI. Run `npx markdownlint-cli2 "**/*.md"` to check, `npx markdownlint-cli2 --fix "**/*.md"` to autofix the rules that support it. CI doesn't enforce yet — the editor surface is the primary one for now.
 
 ### Haskell code style
 

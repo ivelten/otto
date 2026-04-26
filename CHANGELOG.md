@@ -52,6 +52,30 @@ following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
   appended to `<dir>/.failures.jsonl` with the original URL, a stable
   error class tag (`blocked`, `network_error`, …), and the rendered
   error message.
+- **Sources registry** (`Otto.Sources`): YAML-backed list of topics
+  with seed RSS / Atom feeds, a `SourcesError` sum type covering
+  I/O and parse failures, and `OTTO_SOURCES_PATH` to override the
+  path. The repo ships `config/sources.yaml.example` as a template;
+  the real `config/sources.yaml` is gitignored so the owner's
+  actual subscriptions stay out of source control.
+- **Feed layer** (`Otto.Feed`): `Feeds` record (record-of-functions),
+  `HasFeeds` environment class, `loadFeed` helper, `FeedError` sum
+  type, and an HTTP + `feed`-package implementation (`Otto.Feed.Http`)
+  that fetches and parses RSS 1.0 / RSS 2.0 / Atom into a
+  vendor-neutral `FeedItem` projection. Items without a link are
+  silently dropped at the parser boundary.
+- **Ingestion pipeline** (`Otto.Pipeline`): `runDigest` orchestrates
+  the research run — load sources, fetch each feed, drop items older
+  than 7 days, crawl the rest sequentially with a small inter-request
+  delay, and persist successes / failure records via the catalog.
+  The traversal is sequential by design; concurrency is added later
+  if it matters. The module is named generically (`Otto.Pipeline`)
+  so the future synthesis orchestrator can live alongside the
+  ingestion one.
+- `otto digest` subcommand: runs the ingestion pipeline against
+  `config/sources.yaml` and prints a per-topic summary on stdout. The
+  `otto weekly` slot is reserved for the future synthesis side
+  (catalog → weekly post draft) and is not implemented yet.
 - `otto` executable subcommands:
   - default invocation logs a startup banner.
   - `otto ask [--provider NAME | -p NAME] PROMPT…` sends the prompt

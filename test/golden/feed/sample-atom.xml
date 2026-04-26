@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Example Atom Feed</title>
+  <id>urn:uuid:example-atom</id>
+  <updated>2026-04-20T10:00:00Z</updated>
+  <link href="https://example.com/" />
+  <entry>
+    <title>Atom recent post</title>
+    <link href="https://example.com/atom/recent" />
+    <id>urn:uuid:atom-recent</id>
+    <updated>2026-04-22T10:00:00Z</updated>
+    <published>2026-04-22T10:00:00Z</published>
+    <summary>An Atom entry inside the recency window.</summary>
+  </entry>
+  <entry>
+    <title>Atom older post</title>
+    <link href="https://example.com/atom/older" />
+    <id>urn:uuid:atom-older</id>
+    <updated>2025-12-01T10:00:00Z</updated>
+    <published>2025-12-01T10:00:00Z</published>
+    <summary>An Atom entry outside the recency window.</summary>
+  </entry>
+</feed>

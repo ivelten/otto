@@ -75,7 +75,18 @@ library
     Otto.Crawler.Mock
     Otto.Crawler.Types
     Otto.Error
+    Otto.Feed
+    Otto.Feed.Error
+    Otto.Feed.Handle
+    Otto.Feed.Http
+    Otto.Feed.Types
     Otto.Logging
+    Otto.Pipeline
+    Otto.Sources
+    Otto.Sources.Config
+    Otto.Sources.Error
+    Otto.Sources.File
+    Otto.Sources.Types
 
   build-depends:
     aeson ^>=2.2,
@@ -84,6 +95,7 @@ library
     case-insensitive ^>=1.2,
     co-log ^>=0.6,
     directory ^>=1.3,
+    feed ^>=1.3,
     filepath ^>=1.5,
     http-client ^>=0.7,
     http-client-tls ^>=0.3,
@@ -91,6 +103,7 @@ library
     mtl ^>=2.3,
     text ^>=2.1,
     time ^>=1.12,
+    yaml ^>=0.11,
 
 executable otto
   import: shared
@@ -127,11 +140,15 @@ test-suite otto-test
     Otto.Crawler.JinaIntegrationSpec
     Otto.Crawler.JinaSpec
     Otto.Crawler.MockSpec
+    Otto.Feed.HttpSpec
+    Otto.PipelineSpec
+    Otto.Sources.FileSpec
 
   build-depends:
     aeson,
     base,
     bytestring,
+    co-log,
     directory,
     filepath,
     http-client,

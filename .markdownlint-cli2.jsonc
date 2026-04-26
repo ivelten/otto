@@ -1,0 +1,39 @@
+// Markdown lint configuration for Otto.
+//
+// Picked up by:
+//   * the `davidanson.vscode-markdownlint` VSCode extension (live, in-editor)
+//   * the CLI: `npx markdownlint-cli2 "**/*.md"`              (check)
+//                  `npx markdownlint-cli2 --fix "**/*.md"`     (autofix)
+//
+// Disabled rules are deliberate; everything else follows defaults.
+{
+  "config": {
+    // Default rule set is the baseline.
+    "default": true,
+
+    // MD013 (line-length): CLAUDE.md uses one-paragraph-per-line with
+    // no manual wrap; other prose docs hard-wrap around 72-80.
+    // Enforcing a single limit fights one of those styles. Editors
+    // wrap visually anyway.
+    "MD013": false,
+
+    // MD024 (multiple-headings): Keep-a-Changelog uses repeated
+    // "Added"/"Changed"/"Removed" headings under each version. Allow
+    // duplicates as long as they aren't direct siblings.
+    "MD024": { "siblings_only": true },
+
+    // MD060 (table-column-style): pipe alignment in tables is brittle
+    // — a single column rename forces every row to be re-padded.
+    // Visual alignment is nice-to-have, not a quality signal.
+    "MD060": false
+  },
+
+  "ignores": [
+    "dist-newstyle/**",
+    "node_modules/**",
+    // Golden fixtures are byte-exact catalog wire-format samples,
+    // not project documentation. They intentionally start without an
+    // H1 and may contain multiple top-level headings.
+    "test/golden/**"
+  ]
+}

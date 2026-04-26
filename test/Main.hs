@@ -20,6 +20,9 @@ import Otto.Catalog.SlugSpec qualified as CatalogSlugSpec
 import Otto.Crawler.JinaIntegrationSpec qualified as JinaIntegrationSpec
 import Otto.Crawler.JinaSpec qualified as JinaSpec
 import Otto.Crawler.MockSpec qualified as CrawlerMockSpec
+import Otto.Feed.HttpSpec qualified as FeedHttpSpec
+import Otto.PipelineSpec qualified as PipelineSpec
+import Otto.Sources.FileSpec qualified as SourcesFileSpec
 import Test.Tasty (defaultMain, testGroup)
 
 main :: IO ()
@@ -41,5 +44,8 @@ main = do
         jinaIntegration,
         CatalogSlugSpec.tests,
         CatalogRenderSpec.tests,
-        CatalogFileSystemSpec.tests
+        CatalogFileSystemSpec.tests,
+        SourcesFileSpec.tests,
+        FeedHttpSpec.tests,
+        PipelineSpec.tests
       ]

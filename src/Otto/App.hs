@@ -23,6 +23,7 @@ import Control.Monad.Reader (MonadReader, ReaderT (..))
 import Otto.AI.Provider (HasAI (..), Provider)
 import Otto.Catalog.Handle (Catalog, HasCatalog (..))
 import Otto.Crawler.Handle (Crawler, HasCrawler (..))
+import Otto.Feed.Handle (Feeds, HasFeeds (..))
 
 -- | Shared application environment.
 --
@@ -43,7 +44,10 @@ data Env = Env
     envCrawler :: Crawler,
     -- | Configured catalog. Use the disabled catalog from
     -- "Otto.Catalog.Handle" when no backend is available.
-    envCatalog :: Catalog
+    envCatalog :: Catalog,
+    -- | Configured feed loader. Use the disabled feeds from
+    -- "Otto.Feed.Handle" when no backend is available.
+    envFeeds :: Feeds
   }
 
 -- | The application monad.
@@ -72,6 +76,9 @@ instance HasCrawler Env where
 
 instance HasCatalog Env where
   getCatalog = envCatalog
+
+instance HasFeeds Env where
+  getFeeds = envFeeds
 
 -- | Run an 'App' computation with the given environment.
 --

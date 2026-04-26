@@ -1,0 +1,3 @@
+sources:
+  - seeds:
+      - https://example.com/feed.xml
