@@ -104,11 +104,20 @@ All repository content is in **English**: code, identifiers, comments, commit me
 - **Subject line:** start with a [gitmoji](https://gitmoji.dev/), then a single space, then a sentence whose first letter is uppercase. Keep the first letter uppercase unless the first token is a proper noun, package name, or other lowercase-by-convention identifier.
   - Examples: `✨ Add content-research crawler`, `🐛 Fix feed parser off-by-one`, `📝 Update CLAUDE.md with AI provider notes`, `⬆️ Bump aeson to 2.2`.
 
-### Gitignored / local files
+### Private data and local files
+
+The rule: **never commit owner-private data** — subscription lists, personal preferences, runtime output, secrets, project-specific topic taxonomies. When a config file is genuinely needed at runtime, ship a `<name>.example` template with placeholder values, gitignore the real `<name>`, and document the copy-and-edit workflow in [README.md](README.md). The current example: [`config/sources.yaml.example`](config/sources.yaml.example) is committed; the real `config/sources.yaml` is gitignored. Secrets (API keys, webhook URLs) stay in environment variables (`OTTO_*` family — see `app/Main.hs` and the README), never in committed files.
+
+**Public identity is intentional and stays.** Author name, email, copyright line, GitHub handle in `otto.cabal` / `LICENSE`, and the `User-Agent` string in `Otto.Feed.Http` are required package metadata and identify Otto to upstream services — don't try to scrub them.
+
+Currently gitignored:
 
 - `.envrc` and `.direnv/` — per-project environment via direnv.
 - `.claude/settings.local.json` — Claude Code local (per-machine) settings.
 - Any `.env*` files carrying secrets.
+- `config/sources.yaml` — owner's private feed registry; copy from `config/sources.yaml.example`.
+- `catalog/` — runtime output of `otto research` / `otto digest`.
+- `NEXT.md`, `TODO.md`, `NOTES.md` — local working / pick-up-next notes.
 
 ## Memory for Claude
 
