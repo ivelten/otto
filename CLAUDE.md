@@ -78,6 +78,13 @@ All repository content is in **English**: code, identifiers, comments, commit me
 - **Typed errors.** Model errors through the type system, not strings. Each module defines its own error sum type (e.g. `CrawlerError`, `ProviderError`, `DbError`) capturing the concrete failure modes, with fields that preserve the context needed to debug or recover. At the application boundary, a single union type (e.g. `OttoError`) wraps the per-module errors so callers can pattern-match without losing specificity. Every error type implements `Show` such that its rendering is a formatted, human-readable message ready for logging or printing — no extra formatting layer needed at the call site.
 - **Railway-oriented style.** Model failure as data. Use `ExceptT` / `Either` for sequential pipelines where the first error short-circuits, and an applicative `Validation` (e.g. the [`validation`](https://hackage.haskell.org/package/validation) package) for accumulating errors (form/input validation). Reserve `error` / `undefined` / partial functions for invariants a caller cannot violate — never for expected failure modes.
 
+### Documentation
+
+- **Sources of truth.** Module-level and per-identifier Haddock is the canonical documentation for code; `CHANGELOG.md` is the canonical history; `CLAUDE.md` is the canonical architecture/conventions surface; `README.md` is the project's first-impression page only.
+- **Root `README.md` stays small.** It carries the project pitch, quickstart, a layout pointer, and links out — never long-form reference material that scales with the codebase. Do not introduce per-directory `README.md` files: they duplicate Haddock and multiply drift.
+- **Every change checks the README.** Whenever a change adds a subcommand, env var, dependency, or top-level directory, ask whether the root `README.md` needs an update. Update it in the same commit, or note explicitly why it was skipped.
+- **Split when a section starts dominating.** When one section (typically `Configuration` or `Subcommands`) outgrows the rest of the README, move *that* section into a dedicated file under `docs/` (e.g. `docs/configuration.md`, `docs/cli.md`) and leave a one-line pointer in the README. Split by topic, not by source-tree path.
+
 ### Git
 
 - **Author:** commits are authored by the repository owner (the local git `user.name` / `user.email`). Never commit as the Claude user. Claude may appear only as a co-author via the standard `Co-Authored-By:` trailer, including the model name — e.g. `Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>`.

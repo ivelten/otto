@@ -17,6 +17,7 @@ module Otto.Error
 where
 
 import Otto.AI.Error (ProviderError)
+import Otto.Catalog.Error (CatalogError)
 import Otto.Crawler.Error (CrawlerError)
 
 -- | Top-level error type. Grows as modules are added.
@@ -28,4 +29,7 @@ data OttoError
     -- blocked target, auth, rate limit, or misconfiguration). See
     -- "Otto.Crawler.Error".
     CrawlError CrawlerError
+  | -- | A failure surfaced by a catalog backend (filesystem I/O or
+    -- misconfiguration). See "Otto.Catalog.Error".
+    CatalogStoreError CatalogError
   deriving stock (Show)

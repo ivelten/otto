@@ -34,6 +34,24 @@ following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
     returns.
   - **Mock** crawler (`Otto.Crawler.Mock`) with the same capture / queue
     shape as the AI mock.
+- **Backend-agnostic catalog layer** (`Otto.Catalog`): `Catalog` record,
+  `HasCatalog` environment class, `save` / `recordFailure` helpers,
+  `CatalogError` sum type, and `crawlerErrorToFailure` to bridge crawl
+  errors into the failure log. The catalog gives crawl results a
+  durable home so the link is no longer the source of truth.
+  - **Filesystem** implementation (`Otto.Catalog.FileSystem`) writes
+    one `<dir>/<slug>.md` per URL with YAML frontmatter (source URL,
+    title, published / crawled timestamps, crawler name) and appends
+    crawl failures to `<dir>/.failures.jsonl`. Slugs are FNV-1a 64-bit
+    hex over the URL — deterministic, so re-saving the same URL is
+    idempotent. Files are written as UTF-8 explicitly, locale-independent.
+  - Pure renderer (`Otto.Catalog.Render`) golden-tested for the
+    canonical Markdown + YAML and JSONL wire formats.
+- `otto research URL` subcommand: fetches the URL through the
+  configured crawler and persists it via the catalog. Crawl errors are
+  appended to `<dir>/.failures.jsonl` with the original URL, a stable
+  error class tag (`blocked`, `network_error`, …), and the rendered
+  error message.
 - `otto` executable subcommands:
   - default invocation logs a startup banner.
   - `otto ask [--provider NAME | -p NAME] PROMPT…` sends the prompt
@@ -42,6 +60,9 @@ following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
   - `otto crawl URL` fetches the URL through the configured crawler and
     prints the extracted Markdown on stdout; errors (including
     `CrawlerBlocked`) go to stderr with a non-zero exit.
+  - `otto research URL` fetches the URL and persists it to the
+    catalog; crawl errors are recorded in the failure log instead of
+    discarded.
   - `otto --help` / `-h` prints usage and the list of recognized
     environment variables.
 - GitHub Actions CI workflow on `ubuntu-24.04-arm` that builds the

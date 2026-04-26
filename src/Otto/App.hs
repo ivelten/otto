@@ -21,6 +21,7 @@ import Colog (HasLog (..), LogAction (..), Message)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Reader (MonadReader, ReaderT (..))
 import Otto.AI.Provider (HasAI (..), Provider)
+import Otto.Catalog.Handle (Catalog, HasCatalog (..))
 import Otto.Crawler.Handle (Crawler, HasCrawler (..))
 
 -- | Shared application environment.
@@ -39,7 +40,10 @@ data Env = Env
     envAI :: Provider,
     -- | Configured crawler. Use the disabled crawler from
     -- "Otto.Crawler.Handle" when no crawler is available.
-    envCrawler :: Crawler
+    envCrawler :: Crawler,
+    -- | Configured catalog. Use the disabled catalog from
+    -- "Otto.Catalog.Handle" when no backend is available.
+    envCatalog :: Catalog
   }
 
 -- | The application monad.
@@ -65,6 +69,9 @@ instance HasAI Env where
 
 instance HasCrawler Env where
   getCrawler = envCrawler
+
+instance HasCatalog Env where
+  getCatalog = envCatalog
 
 -- | Run an 'App' computation with the given environment.
 --

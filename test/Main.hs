@@ -14,6 +14,9 @@ import Otto.AI.CliSpec qualified as CliSpec
 import Otto.AI.GeminiIntegrationSpec qualified as GeminiIntegrationSpec
 import Otto.AI.GeminiSpec qualified as GeminiSpec
 import Otto.AI.MockSpec qualified as AIMockSpec
+import Otto.Catalog.FileSystemSpec qualified as CatalogFileSystemSpec
+import Otto.Catalog.RenderSpec qualified as CatalogRenderSpec
+import Otto.Catalog.SlugSpec qualified as CatalogSlugSpec
 import Otto.Crawler.JinaIntegrationSpec qualified as JinaIntegrationSpec
 import Otto.Crawler.JinaSpec qualified as JinaSpec
 import Otto.Crawler.MockSpec qualified as CrawlerMockSpec
@@ -35,5 +38,8 @@ main = do
         geminiIntegration,
         CrawlerMockSpec.tests,
         JinaSpec.tests,
-        jinaIntegration
+        jinaIntegration,
+        CatalogSlugSpec.tests,
+        CatalogRenderSpec.tests,
+        CatalogFileSystemSpec.tests
       ]

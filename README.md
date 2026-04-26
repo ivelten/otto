@@ -40,6 +40,10 @@ cabal run otto -- --help
 - `otto crawl URL` — fetches URL through the crawler (Jina Reader) and
   prints the extracted Markdown on stdout. Blocked targets (CAPTCHA /
   403 from the upstream site) go to stderr with a non-zero exit.
+- `otto research URL` — fetches URL and persists it to the catalog as
+  `<OTTO_CATALOG_DIR>/<slug>.md` with YAML frontmatter. Crawl errors
+  are appended to `<OTTO_CATALOG_DIR>/.failures.jsonl` instead of
+  discarded.
 - `otto --help` / `otto -h` — prints usage and the list of recognized
   environment variables.
 
@@ -54,6 +58,9 @@ OTTO_GEMINI_API_KEY=... cabal run -v0 otto -- ask --provider gemini "Explain mon
 
 # Crawl a page to stdout (works anonymously on Jina's free tier)
 cabal run -v0 otto -- crawl https://example.com > example.md
+
+# Persist a page to the catalog (default: ./catalog/<slug>.md)
+cabal run -v0 otto -- research https://example.com
 ```
 
 ## Configuration
@@ -87,6 +94,13 @@ automatically by `direnv`).
   `browser` forces Jina's server-side headless renderer and consumes
   more credits on paid tiers.
 
+### Catalog
+
+- `OTTO_CATALOG_DIR` — optional; root directory for persisted research.
+  Defaults to `./catalog/`. `otto research URL` writes one
+  `<dir>/<slug>.md` per saved page and appends crawl failures to
+  `<dir>/.failures.jsonl`.
+
 ### Logging
 
 - `OTTO_DISCORD_WEBHOOK_URL` — optional. When set, `Warning+` log
@@ -105,15 +119,16 @@ automatically by `direnv`).
 .
 ├── src/Otto/
 │   ├── AI/                   # Provider abstraction + impls (Anthropic, Gemini, Mock)
+│   ├── Catalog/              # Catalog abstraction + filesystem impl + pure renderer
 │   ├── Crawler/              # Crawler abstraction + Jina Reader impl + Mock
-│   ├── App.hs                # Application monad, Env, HasLog/HasAI/HasCrawler instances
-│   ├── Error.hs              # OttoError union (AIError | CrawlError)
+│   ├── App.hs                # Application monad, Env, HasLog/HasAI/HasCrawler/HasCatalog instances
+│   ├── Error.hs              # OttoError union (AIError | CrawlError | CatalogStoreError)
 │   └── Logging.hs            # co-log bootstrap (stdout + optional Discord)
 ├── app/Main.hs               # Executable entry point + CLI dispatch
 ├── test/
 │   ├── Main.hs               # tasty runner
 │   ├── Otto/                 # Spec modules mirroring src/Otto
-│   └── golden/               # Golden fixtures (Anthropic / Gemini JSON bodies)
+│   └── golden/               # Golden fixtures (Anthropic / Gemini / catalog wire formats)
 ├── .github/workflows/ci.yml  # ARM64 build + test on push / PR
 ├── otto.cabal                # Single-package manifest
 ├── cabal.project

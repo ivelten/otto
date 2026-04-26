@@ -10,6 +10,8 @@
 --   the selected AI provider and prints the response to stdout.
 -- * @crawl URL@ → fetches URL through the configured crawler and
 --   prints the extracted Markdown to stdout.
+-- * @research URL@ → fetches URL and persists it to the catalog;
+--   crawl failures are appended to the catalog's failure log.
 -- * @--help@ / @-h@ → prints usage.
 --
 -- Provider-selection precedence for @ask@: the @--provider@/@-p@
@@ -40,6 +42,14 @@ import Otto.AI.Cli
     parseAskArgs,
   )
 import Otto.App (App, Env (..), liftLogAction, runApp)
+import Otto.Catalog
+  ( CatalogEntry (..),
+    buildCatalog,
+    crawlerErrorToFailure,
+    loadCatalogConfigFromEnv,
+    recordFailure,
+    save,
+  )
 import Otto.Crawler
   ( CrawlRequest (..),
     CrawlResult (..),
@@ -68,6 +78,7 @@ main = do
     ["-h"] -> printUsage
     ("ask" : rest) -> runAskCmd rest
     ("crawl" : rest) -> runCrawlCmd rest
+    ("research" : rest) -> runResearchCmd rest
     _ -> do
       hPutStrLn stderr ("unknown arguments: " <> unwords args)
       printUsage
@@ -80,7 +91,8 @@ printUsage =
     [ "usage:",
       "  otto                                   run the default startup routine",
       "  otto ask [--provider NAME] PROMPT...   send PROMPT through the selected AI provider",
-      "  otto crawl URL                         fetch URL as canonical Markdown",
+      "  otto crawl URL                         fetch URL as canonical Markdown (stdout only)",
+      "  otto research URL                      fetch URL and save it to the catalog",
       "  otto --help | -h                       show this message",
       "",
       "provider-selection precedence for `ask`:",
@@ -93,6 +105,7 @@ printUsage =
       "  OTTO_GEMINI_API_KEY        required when the Gemini provider is used",
       "  OTTO_JINA_API_KEY          optional; enables Jina's authenticated tier",
       "  OTTO_JINA_ENGINE           optional; direct (default) | browser",
+      "  OTTO_CATALOG_DIR           optional; root for the research catalog (default: ./catalog)",
       "  OTTO_DISCORD_WEBHOOK_URL   optional; Warning+ logs posted there"
     ]
 
@@ -163,6 +176,45 @@ dispatchCrawl url = do
       exitFailure
     Right res -> Text.putStrLn (crawledContent res)
 
+runResearchCmd :: [String] -> IO ()
+runResearchCmd [] = do
+  hPutStrLn stderr "usage: otto research URL"
+  exitFailure
+runResearchCmd [url] = dispatchResearch (URL (Text.pack url))
+runResearchCmd extra = do
+  hPutStrLn
+    stderr
+    ("otto research: expected exactly one URL, got " <> show (length extra))
+  exitFailure
+
+-- | Fetch a URL, persist a successful crawl to the catalog, or
+-- append a failure record on a crawl error. The crawl error is also
+-- printed to stderr for visibility, but exit code 0 means the
+-- failure record was written successfully — the catalog command
+-- treats every outcome as bookkeeping.
+dispatchResearch :: URL -> IO ()
+dispatchResearch url = do
+  cfg <- loadAIConfigFromEnv
+  pref <- resolvePreferred Nothing
+  env <- buildEnv cfg pref
+  result <- runApp env (fetch CrawlRequest {crawlUrl = url})
+  case result of
+    Left err -> do
+      hPutStrLn stderr (show err)
+      logged <- runApp env (recordFailure (crawlerErrorToFailure url err))
+      case logged of
+        Left e -> do
+          hPutStrLn stderr ("failed to record crawl failure: " <> show e)
+          exitFailure
+        Right () -> exitFailure
+    Right res -> do
+      saved <- runApp env (save res)
+      case saved of
+        Left e -> do
+          hPutStrLn stderr (show e)
+          exitFailure
+        Right entry -> putStrLn ("saved: " <> entryPath entry)
+
 -- | Resolve the preferred provider: the command-line override wins,
 -- otherwise the @OTTO_PROVIDER@ env variable, otherwise
 -- 'PreferAnthropic'. An unrecognized env variable value produces a
@@ -185,6 +237,7 @@ buildEnv :: AIConfig -> PreferredProvider -> IO Env
 buildEnv aiCfg pref = do
   manager <- newTlsManager
   crawlerCfg <- loadCrawlerConfigFromEnv
+  catalogCfg <- loadCatalogConfigFromEnv
   webhookUrl <- fmap Text.pack <$> lookupEnv "OTTO_DISCORD_WEBHOOK_URL"
   ioLogAction <-
     bootstrapLogAction manager LoggingConfig {logDiscordWebhookUrl = webhookUrl}
@@ -192,5 +245,6 @@ buildEnv aiCfg pref = do
     Env
       { envLogAction = liftLogAction ioLogAction,
         envAI = buildProvider manager aiCfg pref,
-        envCrawler = buildCrawler manager crawlerCfg
+        envCrawler = buildCrawler manager crawlerCfg,
+        envCatalog = buildCatalog catalogCfg
       }
