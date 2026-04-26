@@ -4,8 +4,10 @@ version: 0.1.0.0
 synopsis: Personal automation bot for research and blog management
 description:
   Otto is a personal automation bot. It fetches web pages as canonical
-  Markdown and queries multiple AI providers (Anthropic, Gemini) through
-  a vendor-neutral interface. See CLAUDE.md for architecture and
+  Markdown, persists them to a research catalog, and queries multiple
+  AI providers (Anthropic, Gemini) through a vendor-neutral interface.
+  The `otto digest` command walks an RSS / Atom source registry and
+  feeds the catalog automatically. See CLAUDE.md for architecture and
   conventions.
 
 homepage: https://github.com/ivelten/otto

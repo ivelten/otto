@@ -46,6 +46,10 @@ NOTES.md
 # config/sources.yaml.example).
 config/sources.yaml
 
+# Otto runtime output: research catalog + failure log written by
+# `otto research` / `otto digest`.
+catalog/
+
 # VS Code
 .vscode/*
 !.vscode/extensions.json
