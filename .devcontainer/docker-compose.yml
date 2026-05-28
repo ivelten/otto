@@ -1,0 +1,13 @@
+services:
+  app:
+    image: ivelten/haskell-devcontainer
+    command: /bin/sh -c "while sleep 1000; do :; done"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 2048
+    volumes:
+      - ..:/workspaces/haskell:cached
+      - ${HOME}/.claude:/home/vscode/.claude:cached
+      - ${HOME}/.claude.json:/home/vscode/.claude.json:cached
